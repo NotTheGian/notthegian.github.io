@@ -3,479 +3,356 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>Fusagasugá Lite · Aforo en locales</title>
-    <!-- Estilos minimalistas y táctiles -->
+    <title>Fusa·Heatmap colaborativo P2P</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
         }
-
         body {
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: #f5f7fb;
-            color: #1f2a3e;
-            touch-action: pan-x pan-y; /* mejor scroll táctil */
-        }
-
-        /* Contenedor principal tipo app */
-        .app {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #1a2a2a;
+            height: 100vh;
             display: flex;
             flex-direction: column;
-            height: 100vh;
-            width: 100%;
-            overflow: hidden;
         }
-
-        /* Header fijo */
         .header {
             background: #0f2b2a;
             color: white;
             padding: 12px 16px;
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            flex-shrink: 0;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
         }
         .header h1 {
-            font-size: 1.35rem;
+            font-size: 1.2rem;
             font-weight: 600;
-            letter-spacing: -0.2px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
         }
-        .header h1 span {
-            font-size: 1.5rem;
-        }
-        .refresh-btn {
+        .stats {
             background: #2c4e4b;
-            border: none;
-            color: white;
-            font-size: 0.8rem;
-            padding: 6px 12px;
-            border-radius: 40px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .refresh-btn:active { background: #1e3a38; transform: scale(0.96); }
-
-        /* Mapa ocupa la mayor parte */
-        .map-wrapper {
-            flex: 2;
-            min-height: 40vh;
-            background: #cbd5e1;
-            position: relative;
-        }
-        #map {
-            width: 100%;
-            height: 100%;
-        }
-
-        /* Panel inferior deslizable (tipo sheet) */
-        .bottom-sheet {
-            background: white;
-            border-radius: 24px 24px 0 0;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
-            display: flex;
-            flex-direction: column;
-            max-height: 50%;
-            flex-shrink: 0;
-            transition: max-height 0.2s ease;
-        }
-        .sheet-handle {
-            width: 40px;
-            height: 4px;
-            background: #cbd5e1;
-            border-radius: 10px;
-            margin: 10px auto 6px;
-        }
-        .controls {
-            padding: 8px 16px;
-            display: flex;
-            gap: 16px;
-            justify-content: space-between;
-            border-bottom: 1px solid #eef2f6;
-            flex-wrap: wrap;
-        }
-        .control-group {
-            flex: 1;
-            min-width: 120px;
-        }
-        .control-group label {
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: #2c4e4b;
-            display: flex;
-            justify-content: space-between;
-        }
-        input[type="range"] {
-            width: 100%;
-            margin-top: 4px;
-            accent-color: #2c7a6e;
-        }
-        .valor {
-            background: #eef2f6;
-            border-radius: 20px;
-            padding: 2px 8px;
-            font-size: 0.7rem;
-            font-family: monospace;
-        }
-        .geo-btn {
-            background: #1e6f5c;
-            border: none;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 40px;
-            font-size: 0.75rem;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            margin: 6px 0;
-        }
-        .geo-btn:active { transform: scale(0.97); background: #0f4e40; }
-
-        /* Lista de locales estilo timeline */
-        .locales-list-container {
-            overflow-y: auto;
-            padding: 8px 12px 16px;
-            flex: 1;
-        }
-        .locales-list {
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .local-card {
-            background: #ffffff;
-            border-radius: 20px;
-            padding: 12px 14px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
-            border: 1px solid #edf2f7;
-            transition: all 0.1s;
-            cursor: pointer;
-            touch-action: manipulation;
-        }
-        .local-card:active {
-            background: #f8fafc;
-            transform: scale(0.99);
-        }
-        .local-info {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .local-name {
-            font-weight: 600;
-            font-size: 0.95rem;
-        }
-        .local-cat {
-            font-size: 0.65rem;
-            color: #5b6e8c;
-            background: #eef2ff;
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 40px;
-            width: fit-content;
-        }
-        .local-aforo {
-            font-weight: 700;
-            color: #1e6f5c;
-            background: #e0f2ef;
             padding: 4px 12px;
             border-radius: 40px;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
         }
-        .stats-badge {
-            background: #eff6f4;
-            border-radius: 32px;
+        #map {
+            flex: 1;
+            width: 100%;
+            background: #cbd5e1;
+        }
+        .footer {
+            background: #0f2b2a;
+            color: #9bb5b0;
             padding: 6px 12px;
+            font-size: 0.65rem;
             text-align: center;
-            font-size: 0.7rem;
-            margin: 4px 12px 0;
-            display: flex;
-            justify-content: space-between;
         }
-        .leyenda-mobile {
-            font-size: 0.6rem;
-            color: #5e6f8d;
+        .control {
+            padding: 8px 12px;
+            background: #f5f7fb;
             display: flex;
-            justify-content: space-between;
-            margin: 6px 12px 12px;
+            gap: 12px;
             align-items: center;
+            justify-content: space-between;
+            border-top: 1px solid #ddd;
         }
-        .gradient-bar {
-            width: 70px;
+        button {
+            background: #1e6f5c;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 40px;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        button:active { transform: scale(0.96); }
+        .leyenda {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.7rem;
+        }
+        .gradient {
+            width: 80px;
             height: 6px;
-            background: linear-gradient(to right, #2c7bb6, #abd9e9, #ffffbf, #fdae61, #d7191c);
+            background: linear-gradient(to right, blue, cyan, yellow, red);
             border-radius: 6px;
         }
-        footer {
-            font-size: 0.55rem;
-            text-align: center;
-            padding: 6px;
-            color: #94a3b8;
-            border-top: 0.5px solid #eef2f6;
-        }
-        @media (min-width: 640px) {
-            .bottom-sheet { max-height: 45%; }
-            .controls { flex-wrap: nowrap; }
+        #roomStatus {
+            font-size: 0.7rem;
+            background: #2c4e4b;
+            padding: 2px 8px;
+            border-radius: 20px;
         }
     </style>
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <!-- Leaflet & Heat -->
+    <!-- Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+    <!-- PeerJS (WebRTC) -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- jQuery (opcional, para comodidad) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 </head>
 <body>
-<div class="app">
-    <div class="header">
-        <h1><span>📍</span> Fusa·Aforo Lite</h1>
-        <button id="simularRefresh" class="refresh-btn">🔄 Actualizar aforos</button>
+<div class="header">
+    <h1>📍 Fusa·Calor P2P</h1>
+    <div class="stats" id="contadorDispositivos">0 personas</div>
+    <div id="roomStatus">Conectando...</div>
+</div>
+<div id="map"></div>
+<div class="control">
+    <div class="leyenda">
+        <span>🌡️ Intensidad calor</span>
+        <div class="gradient"></div>
+        <span>baja → alta</span>
     </div>
-    <div class="map-wrapper">
-        <div id="map"></div>
-    </div>
-    <div class="bottom-sheet">
-        <div class="sheet-handle"></div>
-        <div class="controls">
-            <div class="control-group">
-                <label>🔥 Umbral <span id="umbralValDisplay" class="valor">0</span></label>
-                <input type="range" id="umbralSlider" min="0" max="500" step="10" value="0">
-            </div>
-            <div class="control-group">
-                <label>🎯 Radio <span id="radioValDisplay" class="valor">20</span></label>
-                <input type="range" id="radioSlider" min="10" max="70" step="2" value="20">
-            </div>
-            <button id="ubicacionMovil" class="geo-btn">📍 Mi ubicación</button>
-        </div>
-        <div class="stats-badge">
-            <span>📊 Activos: <strong id="totalActivos">0</strong></span>
-            <span>🏪 Total: <strong id="totalLocales">0</strong></span>
-            <span>🔥 Aforo máx: <strong>500</strong></span>
-        </div>
-        <div class="locales-list-container">
-            <ul id="listaLocalCards" class="locales-list"></ul>
-        </div>
-        <div class="leyenda-mobile">
-            <div style="display: flex; align-items: center; gap: 6px;"><span>🌡️ Intensidad calor</span><div class="gradient-bar"></div></div>
-            <span>⬅️ Toca un local → ver detalle</span>
-        </div>
-        <footer>🗺️ Mapa de calor · Datos simulados actualizables</footer>
-    </div>
+    <button id="botonCentrar">📍 Mi ubicación</button>
+</div>
+<div class="footer">
+    🔥 Comparte esta URL en todos los teléfonos. El calor aumenta donde hay más personas juntas.
 </div>
 
 <script>
-    (function() {
-        // ---- BASE DE DATOS DE LOCALES (Fusagasugá) ----
-        const baseLocales = [
-            { nombre: "🍕 La Trattoria", cat: "restaurante", lat: 4.3378, lng: -74.3658, aforoBase: 85 },
-            { nombre: "🍔 Hamburguesas El Laguito", cat: "restaurante", lat: 4.3392, lng: -74.3630, aforoBase: 60 },
-            { nombre: "🍽️ Casa Vieja", cat: "restaurante", lat: 4.3350, lng: -74.3672, aforoBase: 120 },
-            { nombre: "🥘 Comidas El Parque", cat: "restaurante", lat: 4.3372, lng: -74.3652, aforoBase: 40 },
-            { nombre: "🍣 Sushi Wok", cat: "restaurante", lat: 4.3349, lng: -74.3622, aforoBase: 70 },
-            { nombre: "☕ Café Central", cat: "café", lat: 4.3365, lng: -74.3647, aforoBase: 45 },
-            { nombre: "🍦 Heladería Antojitos", cat: "café", lat: 4.3385, lng: -74.3665, aforoBase: 25 },
-            { nombre: "☕ Juan Valdez", cat: "café", lat: 4.3400, lng: -74.3635, aforoBase: 60 },
-            { nombre: "🍺 Bar La Casona", cat: "bar", lat: 4.3345, lng: -74.3660, aforoBase: 150 },
-            { nombre: "🎤 Karaoke La Rumba", cat: "bar", lat: 4.3405, lng: -74.3680, aforoBase: 110 },
-            { nombre: "🍷 Vinoteca & Tapas", cat: "bar", lat: 4.3360, lng: -74.3639, aforoBase: 55 },
-            { nombre: "🛍️ Paseo Real", cat: "tienda", lat: 4.3401, lng: -74.3632, aforoBase: 500 },
-            { nombre: "🏪 Éxito Fusagasugá", cat: "tienda", lat: 4.3321, lng: -74.3610, aforoBase: 380 },
-            { nombre: "👗 Boutique Moda", cat: "tienda", lat: 4.3370, lng: -74.3640, aforoBase: 20 }
-        ];
-        const AFORO_MAX = 500;
-        
-        // Variables dinámicas
-        let locales = [];          // se llenará con aforo actual
-        let map, heatLayer;
-        let markers = [];
-        let currentUmbral = 0;
-        let currentRadius = 20;
-        
-        // Guardar preferencias en localStorage
-        function loadPrefs() {
-            let umb = localStorage.getItem('fusa_umbral');
-            let rad = localStorage.getItem('fusa_radio');
-            if (umb !== null) currentUmbral = parseInt(umb, 10);
-            if (rad !== null) currentRadius = parseInt(rad, 10);
-            document.getElementById('umbralSlider').value = currentUmbral;
-            document.getElementById('umbralValDisplay').innerText = currentUmbral;
-            document.getElementById('radioSlider').value = currentRadius;
-            document.getElementById('radioValDisplay').innerText = currentRadius;
+    // --------------------------------------------------------------
+    // 1. CONFIGURACIÓN PEERJS (SALA COMPARTIDA)
+    // --------------------------------------------------------------
+    // ID de sala fijo para que todos los dispositivos se encuentren
+    const ROOM_ID = "fusagasuga2025";
+    let peer;
+    let connections = [];       // lista de peers conectados
+    let miUbicacion = null;
+    let miPeerId = null;
+    let heatLayer;
+    let map;
+    let allLocations = [];      // { lat, lng, peerId, timestamp }
+
+    // --------------------------------------------------------------
+    // 2. INICIALIZAR MAPA
+    // --------------------------------------------------------------
+    function initMap() {
+        const centro = [4.3369, -74.3653];
+        map = L.map('map').setView(centro, 14);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; CartoDB',
+            subdomains: 'abcd'
+        }).addTo(map);
+        heatLayer = L.heatLayer([], { radius: 25, blur: 15, minOpacity: 0.3 });
+        heatLayer.addTo(map);
+    }
+
+    // --------------------------------------------------------------
+    // 3. ACTUALIZAR HEATMAP CON TODAS LAS UBICACIONES RECIBIDAS
+    // --------------------------------------------------------------
+    function actualizarHeatmap() {
+        // Limpiar puntos viejos (más de 30 segundos sin actualizar)
+        const ahora = Date.now();
+        const MAX_EDAD = 30000; // 30 segundos
+        const puntosValidos = allLocations.filter(p => (ahora - p.timestamp) < MAX_EDAD);
+        if (puntosValidos.length !== allLocations.length) {
+            allLocations = puntosValidos;
         }
-        function savePrefs() {
-            localStorage.setItem('fusa_umbral', currentUmbral);
-            localStorage.setItem('fusa_radio', currentRadius);
-        }
-        
-        // Inicializar o actualizar los aforos (simular variación diurna)
-        function actualizarAforosDinamicos() {
-            locales = baseLocales.map(l => {
-                // Variación aleatoria entre -15% y +20% sobre aforoBase, mínimo 5 personas
-                let variacion = 1 + (Math.random() * 0.35 - 0.15);
-                let nuevoAforo = Math.floor(l.aforoBase * variacion);
-                nuevoAforo = Math.min(AFORO_MAX, Math.max(5, nuevoAforo));
-                return { ...l, aforo: nuevoAforo };
-            });
-        }
-        
-        // Filtrar según umbral
-        function getLocalesFiltrados() {
-            return locales.filter(l => l.aforo >= currentUmbral);
-        }
-        
-        // Actualizar heatmap y marcadores
-        function renderizarMapaYLista() {
-            const filtrados = getLocalesFiltrados();
-            // --- Heatmap ---
-            const points = filtrados.map(l => [l.lat, l.lng, l.aforo / AFORO_MAX]);
-            if (heatLayer) map.removeLayer(heatLayer);
-            if (points.length) {
-                heatLayer = L.heatLayer(points, { radius: currentRadius, blur: 12, minOpacity: 0.4, maxZoom: 18 });
-                heatLayer.addTo(map);
-            } else {
-                heatLayer = null;
+        // Generar array para Leaflet.heat: [lat, lng, intensity]
+        // Cada persona aporta intensidad 1 (se acumula)
+        const points = puntosValidos.map(p => [p.lat, p.lng, 1.0]);
+        heatLayer.setLatLngs(points);
+        document.getElementById("contadorDispositivos").innerHTML = `👥 ${puntosValidos.length} persona${puntosValidos.length !== 1 ? 's' : ''}`;
+    }
+
+    // --------------------------------------------------------------
+    // 4. ENVIAR MI UBICACIÓN A TODOS LOS PEERS CONECTADOS
+    // --------------------------------------------------------------
+    function broadcastUbicacion() {
+        if (!miUbicacion || !peer) return;
+        const data = {
+            type: "ubicacion",
+            lat: miUbicacion.lat,
+            lng: miUbicacion.lng,
+            peerId: miPeerId,
+            timestamp: Date.now()
+        };
+        connections.forEach(conn => {
+            if (conn.open) {
+                conn.send(data);
             }
-            
-            // --- Marcadores (limpiar) ---
-            markers.forEach(m => map.removeLayer(m));
-            markers = [];
-            filtrados.forEach(local => {
-                const marker = L.marker([local.lat, local.lng])
-                    .bindPopup(`<b>${local.nombre}</b><br>🍽️ ${local.cat}<br>👥 <strong>${local.aforo} personas</strong><br>📊 Intensidad: ${Math.round((local.aforo/AFORO_MAX)*100)}%`);
-                marker.addTo(map);
-                markers.push(marker);
-            });
-            
-            // Actualizar lista (cards táctiles)
-            const $lista = $('#listaLocalCards');
-            $lista.empty();
-            document.getElementById('totalActivos').innerText = filtrados.length;
-            document.getElementById('totalLocales').innerText = locales.length;
-            
-            filtrados.forEach(local => {
-                const emojiCat = { restaurante: "🍽️", café: "☕", bar: "🍺", tienda: "🛍️" }[local.cat] || "📍";
-                const card = $(`
-                    <li class="local-card" data-lat="${local.lat}" data-lng="${local.lng}" data-nombre="${local.nombre}">
-                        <div class="local-info">
-                            <div class="local-name">${local.nombre}</div>
-                            <div class="local-cat">${emojiCat} ${local.cat}</div>
-                        </div>
-                        <div class="local-aforo">👥 ${local.aforo}</div>
-                    </li>
-                `);
-                card.on('click', (e) => {
-                    e.stopPropagation();
-                    map.setView([local.lat, local.lng], 16);
-                    // buscar el marcador y abrir popup
-                    const markerEncontrado = markers.find(m => {
-                        const latLng = m.getLatLng();
-                        return latLng.lat === local.lat && latLng.lng === local.lng;
-                    });
-                    if (markerEncontrado) markerEncontrado.openPopup();
-                });
-                $lista.append(card);
-            });
-        }
-        
-        // Función completa para actualizar UI tras cambios
-        function refreshAll() {
-            renderizarMapaYLista();
-            savePrefs();
-        }
-        
-        // Simular refresco (cambiar aforos aleatoriamente) estilo "Twitter Lite"
-        function simularActualizacionAforos() {
-            actualizarAforosDinamicos();
-            refreshAll();
-            // Pequeño feedback háptico (vibración si soporta)
-            if (navigator.vibrate) navigator.vibrate(50);
-            // Mostrar notificación temporal en header
-            const $btn = $('.refresh-btn');
-            const originalText = $btn.html();
-            $btn.html('🔄 ¡Aforos actualizados!');
-            setTimeout(() => $btn.html(originalText), 1200);
-        }
-        
-        // Geolocalización móvil con alta precisión
-        function ubicacionMovil() {
-            if (!navigator.geolocation) {
-                alert("Tu navegador no soporta geolocalización.");
-                return;
-            }
-            const $geoBtn = $('#ubicacionMovil');
-            $geoBtn.html('📍 Buscando...');
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const { latitude, longitude } = pos.coords;
-                    map.setView([latitude, longitude], 15);
-                    L.marker([latitude, longitude]).addTo(map).bindPopup("📍 Tú estás aquí").openPopup();
-                    $geoBtn.html('📍 Mi ubicación');
-                },
-                (err) => {
-                    let msg = "";
-                    if (err.code === 1) msg = "Permiso denegado";
-                    else if (err.code === 2) msg = "No disponible";
-                    else msg = "Error";
-                    alert(`Ubicación: ${msg}`);
-                    $geoBtn.html('📍 Mi ubicación');
-                },
-                { enableHighAccuracy: true, timeout: 12000 }
-            );
-        }
-        
-        // Inicializar mapa (Leaflet)
-        function initMap() {
-            const centroFusa = [4.3369, -74.3653];
-            map = L.map('map').setView(centroFusa, 14);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; CartoDB',
-                subdomains: 'abcd'
-            }).addTo(map);
-            // Cargar datos y heatmap
-            actualizarAforosDinamicos();
-            renderizarMapaYLista();
-        }
-        
-        // Eventos y registro
-        $(document).ready(() => {
-            loadPrefs();
-            initMap();
-            
-            // Sliders
-            $('#umbralSlider').on('input', function() {
-                currentUmbral = parseInt($(this).val(), 10);
-                $('#umbralValDisplay').text(currentUmbral);
-                refreshAll();
-            });
-            $('#radioSlider').on('input', function() {
-                currentRadius = parseInt($(this).val(), 10);
-                $('#radioValDisplay').text(currentRadius);
-                refreshAll();
-            });
-            $('#ubicacionMovil').on('click', ubicacionMovil);
-            $('#simularRefresh').on('click', simularActualizacionAforos);
-            
-            // Scroll suave para la lista
-            $('.locales-list-container').on('touchstart', function(){});
         });
-    })();
+        // También agregar mi propia ubicación al heatmap local
+        // Eliminar mi entrada anterior si existe
+        allLocations = allLocations.filter(p => p.peerId !== miPeerId);
+        allLocations.push({
+            lat: miUbicacion.lat,
+            lng: miUbicacion.lng,
+            peerId: miPeerId,
+            timestamp: Date.now()
+        });
+        actualizarHeatmap();
+    }
+
+    // --------------------------------------------------------------
+    // 5. RECIBIR UBICACIÓN DE OTRO PEER
+    // --------------------------------------------------------------
+    function recibirUbicacion(data) {
+        if (data.type === "ubicacion" && data.peerId && data.lat && data.lng) {
+            // Ignorar si es mi propio ID
+            if (data.peerId === miPeerId) return;
+            // Actualizar o agregar la ubicación
+            const existing = allLocations.find(p => p.peerId === data.peerId);
+            if (existing) {
+                existing.lat = data.lat;
+                existing.lng = data.lng;
+                existing.timestamp = data.timestamp;
+            } else {
+                allLocations.push({
+                    lat: data.lat,
+                    lng: data.lng,
+                    peerId: data.peerId,
+                    timestamp: data.timestamp
+                });
+            }
+            actualizarHeatmap();
+        }
+    }
+
+    // --------------------------------------------------------------
+    // 6. CONEXIÓN CON OTROS PEERS (WEBRTC)
+    // --------------------------------------------------------------
+    function conectarASala() {
+        peer = new Peer(ROOM_ID + "_" + Math.random().toString(36).substr(2, 6), {
+            debug: 2,
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]
+            }
+        });
+
+        peer.on('open', (id) => {
+            miPeerId = id;
+            document.getElementById("roomStatus").innerHTML = `📡 Sala: ${ROOM_ID}`;
+            // Unirse a la sala principal: todos se conectan al mismo ID
+            // Para que todos estén en un grupo, cada peer se conecta con el peer que tiene el ID fijo de la sala.
+            // Vamos a crear un peer "coordinador" que es el ID fijo de la sala? No, mejor cada uno se conecta a los demás usando listas.
+            // Método simplificado: cada peer se conecta a un "hub" con ID fijo (ROOM_ID). Ese hub será el primero en crearse.
+            // Para evitar conflictos, el primer peer crea el ID fijo, los demás se conectan a él.
+            // Pero si el primero se desconecta, los demás quedarán aislados.
+            // Mejor usar un enfoque de "todos contra todos": cada vez que un nuevo peer se une, se conecta a todos los existentes.
+            // Para eso necesitamos un servicio de descubrimiento, pero no tenemos.
+            // La alternativa más simple: todos se conectan a un ID común (el mismo ROOM_ID). Ese ID actúa como sala.
+            // PeerJS permite que múltiples peers se conecten al mismo ID (modo "room" no nativo, pero podemos simularlo).
+            // Vamos a hacer que cada peer se conecte al ROOM_ID fijo, y el que lo cree será el "anfitrión".
+        });
+
+        peer.on('connection', (conn) => {
+            // Cuando alguien se conecta a mí
+            conectarConPeer(conn);
+        });
+
+        // Intentar conectarse al peer con ID = ROOM_ID
+        function connectToRoom() {
+            const conn = peer.connect(ROOM_ID);
+            if (conn) {
+                conectarConPeer(conn);
+            } else {
+                setTimeout(connectToRoom, 2000);
+            }
+        }
+
+        // Registrar conexión
+        function conectarConPeer(conn) {
+            if (connections.some(c => c.peer === conn.peer)) return;
+            connections.push(conn);
+            conn.on('data', (data) => {
+                recibirUbicacion(data);
+            });
+            conn.on('close', () => {
+                connections = connections.filter(c => c.peer !== conn.peer);
+                // Eliminar ubicaciones de ese peer
+                allLocations = allLocations.filter(p => p.peerId !== conn.peer);
+                actualizarHeatmap();
+            });
+            // Enviar mi ubicación actual a este nuevo peer
+            if (miUbicacion) {
+                conn.send({
+                    type: "ubicacion",
+                    lat: miUbicacion.lat,
+                    lng: miUbicacion.lng,
+                    peerId: miPeerId,
+                    timestamp: Date.now()
+                });
+            }
+        }
+
+        // Esperar a que peer esté listo, luego conectarse al room
+        peer.on('open', () => {
+            setTimeout(() => {
+                connectToRoom();
+            }, 500);
+        });
+    }
+
+    // --------------------------------------------------------------
+    // 7. GEOLOCALIZACIÓN CONTINUA
+    // --------------------------------------------------------------
+    let watchId;
+    function iniciarGeolocalizacion() {
+        if (!navigator.geolocation) {
+            alert("Tu navegador no soporta geolocalización.");
+            return;
+        }
+        const options = {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 3000
+        };
+        watchId = navigator.geolocation.watchPosition(
+            (pos) => {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                miUbicacion = { lat, lng };
+                broadcastUbicacion();
+                // Centrar mapa la primera vez
+                if (!window.mapCentered) {
+                    map.setView([lat, lng], 16);
+                    window.mapCentered = true;
+                }
+            },
+            (err) => {
+                console.error(err);
+                alert("Error obteniendo ubicación. Asegura los permisos.");
+            },
+            options
+        );
+    }
+
+    function centrarMapa() {
+        if (miUbicacion) {
+            map.setView([miUbicacion.lat, miUbicacion.lng], 16);
+            L.marker([miUbicacion.lat, miUbicacion.lng]).addTo(map).bindPopup("📱 Tú aquí").openPopup();
+        } else {
+            alert("Aún no tenemos tu ubicación.");
+        }
+    }
+
+    // --------------------------------------------------------------
+    // 8. LIMPIEZA AL SALIR
+    // --------------------------------------------------------------
+    window.addEventListener("beforeunload", () => {
+        if (watchId) navigator.geolocation.clearWatch(watchId);
+        if (peer) peer.destroy();
+    });
+
+    // --------------------------------------------------------------
+    // 9. INICIALIZAR
+    // --------------------------------------------------------------
+    $(document).ready(() => {
+        initMap();
+        conectarASala();
+        iniciarGeolocalizacion();
+        $("#botonCentrar").on("click", centrarMapa);
+    });
 </script>
 </body>
 </html>

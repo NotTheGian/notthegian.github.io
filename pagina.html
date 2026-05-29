@@ -3,327 +3,189 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>Fusa·Heatmap colaborativo P2P</title>
+    <title>Fusa·Heatmap Colaborativo</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-            background: #1a2a2a;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-        .header {
-            background: #0f2b2a;
-            color: white;
-            padding: 12px 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        .header h1 {
-            font-size: 1.2rem;
-            font-weight: 600;
-        }
-        .stats {
-            background: #2c4e4b;
-            padding: 4px 12px;
-            border-radius: 40px;
-            font-size: 0.75rem;
-        }
-        #map {
-            flex: 1;
-            width: 100%;
-            background: #cbd5e1;
-        }
-        .footer {
-            background: #0f2b2a;
-            color: #9bb5b0;
-            padding: 6px 12px;
-            font-size: 0.65rem;
-            text-align: center;
-        }
-        .control {
-            padding: 8px 12px;
-            background: #f5f7fb;
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            justify-content: space-between;
-            border-top: 1px solid #ddd;
-        }
-        button {
-            background: #1e6f5c;
-            border: none;
-            padding: 6px 14px;
-            border-radius: 40px;
-            color: white;
-            font-weight: 500;
-            cursor: pointer;
-        }
-        button:active { transform: scale(0.96); }
-        .leyenda {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.7rem;
-        }
-        .gradient {
-            width: 80px;
-            height: 6px;
-            background: linear-gradient(to right, blue, cyan, yellow, red);
-            border-radius: 6px;
-        }
-        #roomStatus {
-            font-size: 0.7rem;
-            background: #2c4e4b;
-            padding: 2px 8px;
-            border-radius: 20px;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: system-ui, sans-serif; background: #1a2a2a; height: 100vh; display: flex; flex-direction: column; }
+        .header { background: #0f2b2a; color: white; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .header h1 { font-size: 1.2rem; }
+        .stats { background: #2c4e4b; padding: 4px 12px; border-radius: 40px; font-size: 0.75rem; }
+        #map { flex: 1; width: 100%; background: #cbd5e1; }
+        .footer { background: #0f2b2a; color: #9bb5b0; padding: 6px 12px; font-size: 0.65rem; text-align: center; }
+        .control { padding: 8px 12px; background: #f5f7fb; display: flex; gap: 12px; align-items: center; justify-content: space-between; border-top: 1px solid #ddd; }
+        button { background: #1e6f5c; border: none; padding: 6px 14px; border-radius: 40px; color: white; cursor: pointer; }
+        .leyenda { display: flex; align-items: center; gap: 8px; font-size: 0.7rem; }
+        .gradient { width: 80px; height: 6px; background: linear-gradient(to right, blue, cyan, yellow, red); border-radius: 6px; }
+        #roomStatus { font-size: 0.7rem; background: #2c4e4b; padding: 2px 8px; border-radius: 20px; }
+        .debug { font-size: 0.65rem; padding: 4px 12px; background: #eef2f5; border-top: 1px solid #ddd; color: #1a2a2a; text-align: center; }
     </style>
-    <!-- Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
-    <!-- PeerJS (WebRTC) -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <!-- jQuery (opcional, para comodidad) -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 </head>
 <body>
 <div class="header">
-    <h1>📍 Fusa·Calor P2P</h1>
+    <h1>📍 Fusa·Calor Colaborativo</h1>
     <div class="stats" id="contadorDispositivos">0 personas</div>
-    <div id="roomStatus">Conectando...</div>
+    <div id="roomStatus">Iniciando...</div>
 </div>
 <div id="map"></div>
 <div class="control">
-    <div class="leyenda">
-        <span>🌡️ Intensidad calor</span>
-        <div class="gradient"></div>
-        <span>baja → alta</span>
-    </div>
+    <div class="leyenda"><span>🌡️ Intensidad calor</span><div class="gradient"></div><span>baja → alta</span></div>
     <button id="botonCentrar">📍 Mi ubicación</button>
 </div>
-<div class="footer">
-    🔥 Comparte esta URL en todos los teléfonos. El calor aumenta donde hay más personas juntas.
-</div>
+<div class="debug" id="debugInfo">Esperando conexión...</div>
+<div class="footer">🔥 Abre esta URL en varios dispositivos. Todos verán a todos.</div>
 
 <script>
-    // --------------------------------------------------------------
-    // 1. CONFIGURACIÓN PEERJS (SALA COMPARTIDA)
-    // --------------------------------------------------------------
-    // ID de sala fijo para que todos los dispositivos se encuentren
     const ROOM_ID = "fusagasuga2025";
-    let peer;
-    let connections = [];       // lista de peers conectados
-    let miUbicacion = null;
-    let miPeerId = null;
-    let heatLayer;
-    let map;
-    let allLocations = [];      // { lat, lng, peerId, timestamp }
+    let peer, hubConnection, isHub = false, connectedPeers = [];
+    let miUbicacion = null, miPeerId = null, heatLayer, map;
+    let allLocations = [];
 
-    // --------------------------------------------------------------
-    // 2. INICIALIZAR MAPA
-    // --------------------------------------------------------------
+    // Servidores ICE (STUN + TURN gratuitos) para maximizar conectividad
+    const iceServers = [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+        { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+        { urls: 'turn:openrelay.metered.ca:3478', username: 'openrelayproject', credential: 'openrelayproject' }
+    ];
+
+    function debug(msg) {
+        document.getElementById("debugInfo").innerHTML = msg;
+        console.log(msg);
+    }
+
     function initMap() {
         const centro = [4.3369, -74.3653];
         map = L.map('map').setView(centro, 14);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; CartoDB',
-            subdomains: 'abcd'
+            attribution: '&copy; OSM &copy; CartoDB', subdomains: 'abcd'
         }).addTo(map);
         heatLayer = L.heatLayer([], { radius: 25, blur: 15, minOpacity: 0.3 });
         heatLayer.addTo(map);
     }
 
-    // --------------------------------------------------------------
-    // 3. ACTUALIZAR HEATMAP CON TODAS LAS UBICACIONES RECIBIDAS
-    // --------------------------------------------------------------
     function actualizarHeatmap() {
-        // Limpiar puntos viejos (más de 30 segundos sin actualizar)
         const ahora = Date.now();
-        const MAX_EDAD = 30000; // 30 segundos
+        const MAX_EDAD = 30000;
         const puntosValidos = allLocations.filter(p => (ahora - p.timestamp) < MAX_EDAD);
-        if (puntosValidos.length !== allLocations.length) {
-            allLocations = puntosValidos;
-        }
-        // Generar array para Leaflet.heat: [lat, lng, intensity]
-        // Cada persona aporta intensidad 1 (se acumula)
-        const points = puntosValidos.map(p => [p.lat, p.lng, 1.0]);
-        heatLayer.setLatLngs(points);
+        if (puntosValidos.length !== allLocations.length) allLocations = puntosValidos;
+        heatLayer.setLatLngs(puntosValidos.map(p => [p.lat, p.lng, 1.0]));
         document.getElementById("contadorDispositivos").innerHTML = `👥 ${puntosValidos.length} persona${puntosValidos.length !== 1 ? 's' : ''}`;
+        debug(`📍 ${puntosValidos.length} dispositivos activos`);
     }
 
-    // --------------------------------------------------------------
-    // 4. ENVIAR MI UBICACIÓN A TODOS LOS PEERS CONECTADOS
-    // --------------------------------------------------------------
-    function broadcastUbicacion() {
-        if (!miUbicacion || !peer) return;
-        const data = {
-            type: "ubicacion",
-            lat: miUbicacion.lat,
-            lng: miUbicacion.lng,
-            peerId: miPeerId,
-            timestamp: Date.now()
-        };
-        connections.forEach(conn => {
-            if (conn.open) {
-                conn.send(data);
-            }
-        });
-        // También agregar mi propia ubicación al heatmap local
-        // Eliminar mi entrada anterior si existe
+    function actualizarMiUbicacion() {
+        if (!miUbicacion) return;
         allLocations = allLocations.filter(p => p.peerId !== miPeerId);
-        allLocations.push({
-            lat: miUbicacion.lat,
-            lng: miUbicacion.lng,
-            peerId: miPeerId,
-            timestamp: Date.now()
-        });
+        allLocations.push({ lat: miUbicacion.lat, lng: miUbicacion.lng, peerId: miPeerId, timestamp: Date.now() });
         actualizarHeatmap();
     }
 
-    // --------------------------------------------------------------
-    // 5. RECIBIR UBICACIÓN DE OTRO PEER
-    // --------------------------------------------------------------
-    function recibirUbicacion(data) {
-        if (data.type === "ubicacion" && data.peerId && data.lat && data.lng) {
-            // Ignorar si es mi propio ID
-            if (data.peerId === miPeerId) return;
-            // Actualizar o agregar la ubicación
-            const existing = allLocations.find(p => p.peerId === data.peerId);
-            if (existing) {
-                existing.lat = data.lat;
-                existing.lng = data.lng;
-                existing.timestamp = data.timestamp;
-            } else {
-                allLocations.push({
-                    lat: data.lat,
-                    lng: data.lng,
-                    peerId: data.peerId,
-                    timestamp: data.timestamp
-                });
-            }
+    function hubEnviarATodos(remitenteId, data) {
+        connectedPeers.forEach(conn => { if (conn.peer !== remitenteId && conn.open) conn.send(data); });
+    }
+
+    function hubRecibirUbicacion(peerId, data) {
+        if (data.type === "ubicacion") {
+            const existing = allLocations.find(p => p.peerId === peerId);
+            if (existing) { existing.lat = data.lat; existing.lng = data.lng; existing.timestamp = data.timestamp; }
+            else { allLocations.push({ lat: data.lat, lng: data.lng, peerId: peerId, timestamp: data.timestamp }); }
             actualizarHeatmap();
+            hubEnviarATodos(peerId, data);
         }
     }
 
-    // --------------------------------------------------------------
-    // 6. CONEXIÓN CON OTROS PEERS (WEBRTC)
-    // --------------------------------------------------------------
-    function conectarASala() {
-        peer = new Peer(ROOM_ID + "_" + Math.random().toString(36).substr(2, 6), {
-            debug: 2,
-            config: {
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' }
-                ]
-            }
-        });
+    function hubRemoverPeer(peerId) {
+        allLocations = allLocations.filter(p => p.peerId !== peerId);
+        actualizarHeatmap();
+        connectedPeers = connectedPeers.filter(conn => conn.peer !== peerId);
+        debug(`Cliente desconectado: ${peerId}`);
+    }
 
+    function iniciarComoHub() {
+        isHub = true;
+        document.getElementById("roomStatus").innerHTML = "🌟 Hub activo";
+        debug("Soy el HUB (punto de encuentro)");
+        peer = new Peer(ROOM_ID, { config: { iceServers: iceServers } });
+        peer.on('open', (id) => { miPeerId = id; debug(`Hub ID: ${id}`); });
+        peer.on('connection', (conn) => {
+            debug(`Nuevo cliente conectado: ${conn.peer}`);
+            connectedPeers.push(conn);
+            conn.on('data', (data) => { hubRecibirUbicacion(conn.peer, data); });
+            conn.on('close', () => { hubRemoverPeer(conn.peer); });
+            const otras = allLocations.filter(p => p.peerId !== conn.peer && p.peerId !== miPeerId);
+            otras.forEach(loc => { conn.send({ type: "ubicacion", lat: loc.lat, lng: loc.lng, peerId: loc.peerId, timestamp: loc.timestamp }); });
+            if (miUbicacion) conn.send({ type: "ubicacion", lat: miUbicacion.lat, lng: miUbicacion.lng, peerId: miPeerId, timestamp: Date.now() });
+        });
+        peer.on('error', (err) => { debug(`Hub error: ${err.type}`); if (err.type === 'unavailable-id') location.reload(); });
+    }
+
+    function iniciarComoCliente() {
+        isHub = false;
+        document.getElementById("roomStatus").innerHTML = "🔗 Conectando al hub...";
+        debug("Soy cliente, intentando conectarme al hub...");
+        peer = new Peer({ config: { iceServers: iceServers } });
         peer.on('open', (id) => {
             miPeerId = id;
-            document.getElementById("roomStatus").innerHTML = `📡 Sala: ${ROOM_ID}`;
-            // Unirse a la sala principal: todos se conectan al mismo ID
-            // Para que todos estén en un grupo, cada peer se conecta con el peer que tiene el ID fijo de la sala.
-            // Vamos a crear un peer "coordinador" que es el ID fijo de la sala? No, mejor cada uno se conecta a los demás usando listas.
-            // Método simplificado: cada peer se conecta a un "hub" con ID fijo (ROOM_ID). Ese hub será el primero en crearse.
-            // Para evitar conflictos, el primer peer crea el ID fijo, los demás se conectan a él.
-            // Pero si el primero se desconecta, los demás quedarán aislados.
-            // Mejor usar un enfoque de "todos contra todos": cada vez que un nuevo peer se une, se conecta a todos los existentes.
-            // Para eso necesitamos un servicio de descubrimiento, pero no tenemos.
-            // La alternativa más simple: todos se conectan a un ID común (el mismo ROOM_ID). Ese ID actúa como sala.
-            // PeerJS permite que múltiples peers se conecten al mismo ID (modo "room" no nativo, pero podemos simularlo).
-            // Vamos a hacer que cada peer se conecte al ROOM_ID fijo, y el que lo cree será el "anfitrión".
-        });
-
-        peer.on('connection', (conn) => {
-            // Cuando alguien se conecta a mí
-            conectarConPeer(conn);
-        });
-
-        // Intentar conectarse al peer con ID = ROOM_ID
-        function connectToRoom() {
+            debug(`Cliente ID: ${id}, conectando a hub ${ROOM_ID}`);
             const conn = peer.connect(ROOM_ID);
-            if (conn) {
-                conectarConPeer(conn);
-            } else {
-                setTimeout(connectToRoom, 2000);
-            }
-        }
+            if (conn) configurarConexionCliente(conn);
+            else setTimeout(() => peer.connect(ROOM_ID), 2000);
+        });
+        peer.on('error', (err) => { debug(`Cliente error: ${err.type}`); });
+    }
 
-        // Registrar conexión
-        function conectarConPeer(conn) {
-            if (connections.some(c => c.peer === conn.peer)) return;
-            connections.push(conn);
-            conn.on('data', (data) => {
-                recibirUbicacion(data);
-            });
-            conn.on('close', () => {
-                connections = connections.filter(c => c.peer !== conn.peer);
-                // Eliminar ubicaciones de ese peer
-                allLocations = allLocations.filter(p => p.peerId !== conn.peer);
+    function configurarConexionCliente(conn) {
+        hubConnection = conn;
+        conn.on('open', () => {
+            document.getElementById("roomStatus").innerHTML = "📡 Conectado al hub";
+            debug("Conectado al hub correctamente");
+            if (miUbicacion) enviarUbicacionAlHub();
+        });
+        conn.on('data', (data) => {
+            if (data.type === "ubicacion" && data.peerId) {
+                const existing = allLocations.find(p => p.peerId === data.peerId);
+                if (existing) { existing.lat = data.lat; existing.lng = data.lng; existing.timestamp = data.timestamp; }
+                else { allLocations.push({ lat: data.lat, lng: data.lng, peerId: data.peerId, timestamp: data.timestamp }); }
                 actualizarHeatmap();
-            });
-            // Enviar mi ubicación actual a este nuevo peer
-            if (miUbicacion) {
-                conn.send({
-                    type: "ubicacion",
-                    lat: miUbicacion.lat,
-                    lng: miUbicacion.lng,
-                    peerId: miPeerId,
-                    timestamp: Date.now()
-                });
             }
-        }
-
-        // Esperar a que peer esté listo, luego conectarse al room
-        peer.on('open', () => {
-            setTimeout(() => {
-                connectToRoom();
-            }, 500);
+        });
+        conn.on('close', () => {
+            document.getElementById("roomStatus").innerHTML = "⚠️ Desconectado. Reconectando...";
+            debug("Desconectado del hub, reintentando...");
+            setTimeout(() => { const newConn = peer.connect(ROOM_ID); if (newConn) configurarConexionCliente(newConn); }, 3000);
         });
     }
 
-    // --------------------------------------------------------------
-    // 7. GEOLOCALIZACIÓN CONTINUA
-    // --------------------------------------------------------------
+    function enviarUbicacionAlHub() {
+        if (hubConnection && hubConnection.open && miUbicacion) {
+            hubConnection.send({ type: "ubicacion", lat: miUbicacion.lat, lng: miUbicacion.lng, peerId: miPeerId, timestamp: Date.now() });
+        }
+    }
+
     let watchId;
     function iniciarGeolocalizacion() {
-        if (!navigator.geolocation) {
-            alert("Tu navegador no soporta geolocalización.");
-            return;
-        }
-        const options = {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 3000
-        };
+        if (!navigator.geolocation) { alert("Geolocalización no soportada"); return; }
         watchId = navigator.geolocation.watchPosition(
             (pos) => {
-                const lat = pos.coords.latitude;
-                const lng = pos.coords.longitude;
-                miUbicacion = { lat, lng };
-                broadcastUbicacion();
-                // Centrar mapa la primera vez
-                if (!window.mapCentered) {
-                    map.setView([lat, lng], 16);
-                    window.mapCentered = true;
+                miUbicacion = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                if (isHub) {
+                    actualizarMiUbicacion();
+                    const data = { type: "ubicacion", lat: miUbicacion.lat, lng: miUbicacion.lng, peerId: miPeerId, timestamp: Date.now() };
+                    connectedPeers.forEach(conn => { if (conn.open) conn.send(data); });
+                } else {
+                    actualizarMiUbicacion();
+                    enviarUbicacionAlHub();
                 }
+                if (!window.mapCentered) { map.setView([miUbicacion.lat, miUbicacion.lng], 16); window.mapCentered = true; }
             },
-            (err) => {
-                console.error(err);
-                alert("Error obteniendo ubicación. Asegura los permisos.");
-            },
-            options
+            (err) => { debug("Error de ubicación: " + err.message); },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 3000 }
         );
     }
 
@@ -331,28 +193,36 @@
         if (miUbicacion) {
             map.setView([miUbicacion.lat, miUbicacion.lng], 16);
             L.marker([miUbicacion.lat, miUbicacion.lng]).addTo(map).bindPopup("📱 Tú aquí").openPopup();
-        } else {
-            alert("Aún no tenemos tu ubicación.");
-        }
+        } else { alert("Aún no tenemos tu ubicación."); }
     }
 
-    // --------------------------------------------------------------
-    // 8. LIMPIEZA AL SALIR
-    // --------------------------------------------------------------
-    window.addEventListener("beforeunload", () => {
-        if (watchId) navigator.geolocation.clearWatch(watchId);
-        if (peer) peer.destroy();
-    });
+    function iniciarSistema() {
+        debug("Iniciando detección de hub...");
+        const testPeer = new Peer(ROOM_ID, { config: { iceServers: iceServers } });
+        testPeer.on('open', () => {
+            debug("Soy el primer dispositivo, me convierto en HUB");
+            testPeer.destroy();
+            iniciarComoHub();
+            iniciarGeolocalizacion();
+        });
+        testPeer.on('error', (err) => {
+            if (err.type === 'unavailable-id') {
+                debug("Hub ya existe, inicio como cliente");
+                testPeer.destroy();
+                iniciarComoCliente();
+                iniciarGeolocalizacion();
+            } else {
+                debug("Error inesperado, reintento como cliente: " + err.type);
+                testPeer.destroy();
+                iniciarComoCliente();
+                iniciarGeolocalizacion();
+            }
+        });
+    }
 
-    // --------------------------------------------------------------
-    // 9. INICIALIZAR
-    // --------------------------------------------------------------
-    $(document).ready(() => {
-        initMap();
-        conectarASala();
-        iniciarGeolocalizacion();
-        $("#botonCentrar").on("click", centrarMapa);
-    });
+    window.addEventListener("beforeunload", () => { if (watchId) navigator.geolocation.clearWatch(watchId); if (peer) peer.destroy(); });
+
+    $(document).ready(() => { initMap(); iniciarSistema(); $("#botonCentrar").on("click", centrarMapa); });
 </script>
 </body>
 </html>

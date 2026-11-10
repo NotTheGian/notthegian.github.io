@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>Fusa·Heatmap Colaborativo</title>
+    <title>Fusa·Heatmap Colaborativo (OSM)</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: system-ui, sans-serif; background: #1a2a2a; height: 100vh; display: flex; flex-direction: column; }
@@ -62,13 +62,16 @@
     function initMap() {
         const centro = [4.3369, -74.3653];
         map = L.map('map').setView(centro, 14);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OSM &copy; CartoDB', subdomains: 'abcd'
+        
+        // AQUÍ SE CAMBIÓ A LA CAPA OFICIAL DE OPENSTREETMAP
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
+
         heatLayer = L.heatLayer([], { radius: 25, blur: 15, minOpacity: 0.3 });
         heatLayer.addTo(map);
         
-        // Limpieza periódica de ubicaciones obsoletas (cada 5 segundos)
         setInterval(actualizarHeatmap, 5000);
     }
 
@@ -130,7 +133,6 @@
             conn.on('close', () => hubRemoverPeer(conn.peer));
             conn.on('error', (err) => debug(`Error con cliente ${conn.peer}: ${err}`));
 
-            // Enviar ubicaciones actuales al nuevo cliente
             const otras = allLocations.filter(p => p.peerId !== conn.peer);
             otras.forEach(loc => conn.send({ type: "ubicacion", lat: loc.lat, lng: loc.lng, peerId: loc.peerId, timestamp: loc.timestamp }));
         });
@@ -240,8 +242,6 @@
 
     function iniciarSistema() {
         debug("Estableciendo conexión PeerJS...");
-        
-        // Intenta registrarse directamente con la ID fija ROOM_ID
         peer = new Peer(ROOM_ID, { config: { iceServers: iceServers } });
 
         peer.on('open', (id) => {
@@ -252,7 +252,6 @@
 
         peer.on('error', (err) => {
             if (err.type === 'unavailable-id') {
-                // Si la ID ROOM_ID ya existe, se crea un peer secundario como Cliente
                 debug("Hub detectado en la red. Conectando como Cliente...");
                 peer.destroy();
                 
